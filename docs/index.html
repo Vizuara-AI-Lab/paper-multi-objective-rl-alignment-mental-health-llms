@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Multi-Objective RL Alignment for Mental Health LLMs</title>
+  <meta name="description" content="Aligning a 1.5B language model for mental health counselling with multi-objective GRPO, Dynamic Reward Weighting, and a Lagrangian safety constraint. The safety constraint costs 0.25%; empathy is budget-bounded, not ceiling-bounded.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <span class="brand">Multi-Objective RL Alignment</span>
+      <nav class="topnav-links" aria-label="Section navigation">
+        <a href="#abstract">01 Abstract</a>
+        <a href="#contributions">02 Contributions</a>
+        <a href="#method">03 Method</a>
+        <a href="#results">04 Results</a>
+        <a href="#context">05 Context</a>
+        <a href="#next">06 Next</a>
+        <a href="#cite">07 Cite</a>
+      </nav>
+      <div class="topnav-cta">
+        <a class="pill" href="main.pdf">Paper</a>
+        <a class="pill outline" href="https://github.com/Vizuara-AI-Lab/paper-multi-objective-rl-alignment-mental-health-llms">Code</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="top">
+      <div class="eyebrow">Reinforcement learning &middot; Alignment &middot; Mental health LLMs</div>
+      <h1>Safety constraints can be free, and empathy is a budget choice, not a ceiling.</h1>
+      <p class="lede">A 1.5B-parameter Qwen2.5 policy trained with Group Relative Policy Optimization, Dynamic Reward Weighting, and a Lagrangian safety constraint produces measurably better mental health responses than its base model, GPT-4, LLaMA3-70B, Gemini, and the human-counsellor responder set on every reward dimension under the same scoring instrument. The Lagrangian safety constraint costs 0.25% composite reward; full-budget empathy raises empathy from 4.213 to 4.918 with no detectable safety side-effect.</p>
+
+      <dl class="metadata-grid">
+        <div><dt>Model</dt><dd>Qwen2.5-1.5B-Instruct</dd></div>
+        <div><dt>Optimizer</dt><dd>GRPO + DRW + Lagrangian</dd></div>
+        <div><dt>Composite (M7)</dt><dd>13.588 vs 13.242 base</dd></div>
+        <div><dt>Informativeness d</dt><dd>0.66 (75% per-question wins)</dd></div>
+        <div><dt>Safety cost</dt><dd>0.25% composite</dd></div>
+        <div><dt>Benchmarks</dt><dd>CounselBench-Eval (89) + CounselChat (276)</dd></div>
+        <div><dt>Conditions</dt><dd>8 (M2, M3, M5, M7, M7-d005, M7-d020, M8, M9)</dd></div>
+        <div><dt>Hardware</dt><dd>RTX PRO 6000, &le; 200 steps</dd></div>
+        <div><dt>License</dt><dd>MIT</dd></div>
+      </dl>
+    </section>
+
+    <section id="abstract">
+      <h2><span class="section-num">01</span>Abstract</h2>
+      <div class="section-narrow">
+        <p>Aligning a language model for mental health counselling requires balancing several distinct response qualities (Guidance, Informativeness, Empathy) against a hard safety constraint, and existing single-reward RLHF designs leave the trade-offs implicit. We train Qwen2.5-1.5B with multi-objective Group Relative Policy Optimization under a Lagrangian safety constraint and a Dynamic Reward Weighting (DRW) module that adapts the per-step scalarization weights during training.</p>
+        <p>We evaluate eight conditions on 89 CounselBench-Eval prompts and replicate on 276 disjoint CounselChat prompts. The proposed M7 condition outperforms the base model on every reward dimension, with the largest effect on Informativeness (<strong>d = 0.66</strong>, 75% per-question win rate). The Lagrangian safety constraint costs only <strong>0.25%</strong> composite reward; tightening the threshold from 0.20 to 0.05 reduces violations from 3.4% to <strong>2.2%</strong> at 0.3% reward cost. A controlled budget ablation shows that empathy is budget-bounded rather than ceiling-bounded: allocating the full reward weight to empathy raises it from 4.213 to <strong>4.918</strong> (p &lt; 0.0001).</p>
+      </div>
+    </section>
+
+    <section id="contributions">
+      <h2><span class="section-num">02</span>Contributions</h2>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <div class="card-num">01</div>
+          <h3>Free safety</h3>
+          <p>The Lagrangian safety constraint reduces composite reward by only 0.25% (M7 vs.&nbsp;M5), well within the 5% pre-registered non-inferiority margin.</p>
+        </article>
+        <article class="feature-card">
+          <div class="card-num">02</div>
+          <h3>Empathy is budget-bounded</h3>
+          <p>Allocating the full reward weight to empathy lifts the score from 4.213 to 4.918 (p &lt; 0.0001). The safety constraint has no detectable empathy effect (&Delta; = 0.017, p = 0.528).</p>
+        </article>
+        <article class="feature-card">
+          <div class="card-num">03</div>
+          <h3>DRW collapses to equal weights</h3>
+          <p>Dynamic weights converge to ~(0.33, 0.33, 0.33). M7 does not significantly outperform the equal-weight M3 baseline (p = 0.442); we report this as an honest negative result.</p>
+        </article>
+        <article class="feature-card">
+          <div class="card-num">04</div>
+          <h3>Threshold trade-off is gentle</h3>
+          <p>Tightening the safety threshold from d = 0.20 to d = 0.05 reduces violations from 3.4% to 2.2% while reducing composite reward by only 0.043 (0.3%).</p>
+        </article>
+        <article class="feature-card">
+          <div class="card-num">05</div>
+          <h3>1.5B beats large general models</h3>
+          <p>Under the same scoring instrument, M7 leads GPT-4, LLaMA3-70B, Gemini, and the human-counsellor responder set on every reward dimension. We discuss the LLM-tilted-scorer caveat explicitly.</p>
+        </article>
+        <article class="feature-card">
+          <div class="card-num">06</div>
+          <h3>Cross-benchmark replication</h3>
+          <p>All findings replicate on 276 disjoint CounselChat questions across 29 topics with cross-benchmark deltas below 0.03 on every metric and condition.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="method">
+      <h2><span class="section-num">03</span>How it works</h2>
+      <div class="section-narrow">
+        <p>We decompose response quality into three independently scored axes (Guidance, Informativeness, Empathy) measured by frozen DistilRoBERTa heads, and treat Safety as a separate cost rather than a fourth reward. The Qwen2.5-1.5B policy is updated with Group Relative Policy Optimization using a scalarized quality reward minus a Lagrangian penalty on the safety cost. A Dynamic Reward Weighting module adapts the per-axis weights based on the remaining headroom to each axis ceiling.</p>
+        <p>To isolate the contribution of each design choice, we train eight conditions that vary only the scalarization weights and whether the safety constraint is active. M2 fixes guidance-heavy weights; M3 fixes equal weights; M5 disables safety; M7 (proposed) combines DRW with safety; M7-d005 / M7-d020 sweep the threshold; M8 and M9 allocate the full budget to empathy with and without safety. Conditions M3, M5, and M7 are run with three random seeds.</p>
+      </div>
+      <figure class="wide-figure">
+        <img src="figures/fig-architecture.png" alt="Diagram of the multi-objective RL alignment system: Qwen2.5-1.5B policy updated by GRPO with Dynamic Reward Weighting and a Lagrangian safety constraint over four frozen DistilRoBERTa scorers.">
+        <figcaption><strong>Figure 1.</strong> Multi-objective RL alignment architecture. The policy is updated by GRPO using a scalarized reward from three frozen DistilRoBERTa scorers (Guidance, Informativeness, Empathy) with Dynamic Reward Weighting and a Lagrangian safety constraint over a fourth Safety Cost scorer.</figcaption>
+      </figure>
+    </section>
+
+    <section id="results">
+      <h2><span class="section-num">04</span>What we found</h2>
+      <div class="big-metric">
+        <div class="metric-value">+2.6%</div>
+        <div class="metric-label">M7 composite reward over Base on CounselBench-Eval (13.588 vs. 13.242). Informativeness Cohen&rsquo;s d = 0.66; M7 wins on 75% of questions on Informativeness, 71% on Guidance, 63% on Empathy.</div>
+      </div>
+      <figure class="wide-figure">
+        <img src="figures/fig-main-rewards.png" alt="Grouped bar chart of Guidance, Informativeness, and Empathy reward scores across seven conditions.">
+        <figcaption><strong>Figure 2.</strong> Per-dimension reward by condition on CounselBench-Eval. All RL conditions improve over Base; M7 attains the highest Informativeness (4.553) among core conditions.</figcaption>
+      </figure>
+      <figure class="wide-figure">
+        <img src="figures/fig-empathy-budget.png" alt="Bar chart showing M7 empathy 4.213, M8 empathy 4.918, M9 empathy 4.934 on CounselBench-Eval, replicated on CounselChat.">
+        <figcaption><strong>Figure 3.</strong> Empathy is budget-bounded, not ceiling-bounded. The M8 vs.&nbsp;M9 contrast (with vs.&nbsp;without safety) is 0.017 (p = 0.528).</figcaption>
+      </figure>
+      <figure class="wide-figure">
+        <img src="figures/fig-safety-tradeoff.png" alt="Dual-axis line plot showing violation rate and composite reward across safety thresholds d = 0.05, 0.10, 0.20.">
+        <figcaption><strong>Figure 4.</strong> Safety threshold sweep. Tightening from d = 0.20 to d = 0.05 reduces violations from 3.4% to 2.2% at 0.043 composite-reward cost (0.3%).</figcaption>
+      </figure>
+      <figure class="wide-figure">
+        <img src="figures/fig-baselines.png" alt="Grouped bar chart comparing Gemini, human counsellors, GPT-4, LLaMA3-70B, and M7 (1.5B) across Guidance, Informativeness, Empathy, and Safety cost.">
+        <figcaption><strong>Figure 5.</strong> Comparison to public CounselBench responder sets under the same reward instrument. M7 leads on every dimension; the LLM-tilted-scorer caveat is discussed in the paper.</figcaption>
+      </figure>
+    </section>
+
+    <section id="context">
+      <h2><span class="section-num">05</span>Why it matters</h2>
+      <div class="section-narrow">
+        <p>Mental health is a domain where the cost of an unhelpful or unsafe LLM response is high. Practitioners evaluate counselling along distinct axes (guidance, informativeness, empathy) under a hard safety constraint, but standard RLHF aligns against a single scalar. This work shows that a constrained-optimization formulation is essentially free in this regime and that empathy responds linearly to optimization budget rather than saturating, both of which are operationally useful for practitioners deciding where to spend reward weight.</p>
+        <p>A 1.5B parameter policy is small enough to deploy on-device, which matters when users are disclosing sensitive material and cloud APIs are not appropriate. The full implementation, configuration files, scored generations, and trained checkpoints are released.</p>
+      </div>
+    </section>
+
+    <section id="next">
+      <h2><span class="section-num">06</span>Where to go next</h2>
+      <div class="cta-grid">
+        <a class="cta-card" href="main.pdf">
+          <div class="cta-num">01</div>
+          <h3>Read the paper <span class="arrow">&rarr;</span></h3>
+          <p>Full method, eight-condition design, statistics, and limitations.</p>
+        </a>
+        <a class="cta-card" href="https://github.com/Vizuara-AI-Lab/paper-multi-objective-rl-alignment-mental-health-llms">
+          <div class="cta-num">02</div>
+          <h3>See the code <span class="arrow">&rarr;</span></h3>
+          <p>Repository with training pipeline, scoring scripts, and references.</p>
+        </a>
+        <a class="cta-card" href="https://github.com/Vizuara-AI-Lab/paper-multi-objective-rl-alignment-mental-health-llms#reproduction">
+          <div class="cta-num">03</div>
+          <h3>Reproduce <span class="arrow">&rarr;</span></h3>
+          <p>Hyperparameters, condition matrix, and seed configuration in the README.</p>
+        </a>
+        <a class="cta-card" href="#cite">
+          <div class="cta-num">04</div>
+          <h3>Cite <span class="arrow">&rarr;</span></h3>
+          <p>BibTeX below; copy with one click.</p>
+        </a>
+      </div>
+    </section>
+
+    <section id="cite">
+      <h2><span class="section-num">07</span>Cite</h2>
+      <div class="cite-block">
+        <button type="button" class="cite-copy-btn" data-target="cite-bibtex" aria-label="Copy BibTeX to clipboard">Copy</button>
+        <pre><code id="cite-bibtex">@misc{anonymous2026morlmh,
+  title  = {Multi-Objective RL Alignment for Mental Health LLMs:
+            Dynamic Reward Weighting and Free Safety Constraints},
+  author = {Anonymous Authors},
+  year   = {2026},
+  note   = {Workshop submission, sealed for review.}
+}</code></pre>
+      </div>
+      <script>
+        document.querySelectorAll('.cite-copy-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = btn.getAttribute('data-target');
+            var code = document.getElementById(id);
+            if (!code) return;
+            var text = code.innerText;
+            var done = function() {
+              btn.classList.add('is-copied');
+              btn.textContent = 'Copied';
+              setTimeout(function() {
+                btn.classList.remove('is-copied');
+                btn.textContent = 'Copy';
+              }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(done, function() {
+                fallback();
+              });
+            } else {
+              fallback();
+            }
+            function fallback() {
+              var range = document.createRange();
+              range.selectNode(code);
+              var sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(range);
+              try { document.execCommand('copy'); done(); } catch (e) {}
+              sel.removeAllRanges();
+            }
+          });
+        });
+      </script>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div>
+        <h4>Project</h4>
+        <p>Multi-Objective RL Alignment for Mental Health LLMs.</p>
+        <p>Workshop submission, 2026.</p>
+      </div>
+      <div>
+        <h4>Navigate</h4>
+        <ul>
+          <li><a href="#abstract">Abstract</a></li>
+          <li><a href="#method">Method</a></li>
+          <li><a href="#results">Results</a></li>
+          <li><a href="#cite">Cite</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>External</h4>
+        <ul>
+          <li><a href="main.pdf">Paper PDF</a></li>
+          <li><a href="https://github.com/Vizuara-AI-Lab/paper-multi-objective-rl-alignment-mental-health-llms">GitHub</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>License</h4>
+        <p>Code and content released under the MIT License.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
